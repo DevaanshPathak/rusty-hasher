@@ -6,6 +6,7 @@ use clap::{Arg, Command};
 use sha2::{Sha256, Sha512, Digest as Sha2Digest};
 use sha1::Sha1;
 use blake3;
+use arboard::Clipboard;
 
 #[derive(Debug)]
 enum Algorithm {
@@ -60,6 +61,12 @@ fn main() {
                 .long("output")
                 .help("Path to save the hash result")
                 .num_args(1),
+        )
+        .arg(
+            Arg::new("copy")
+                .long("copy")
+                .help("Copy the hash to clipboard")
+                .num_args(0),
         )
         .get_matches();
 
@@ -121,11 +128,17 @@ fn main() {
 
     println!("🔐 {} hash: {}", hash_label, hash);
 
+    if matches.get_flag("copy") {
+        let mut clipboard = Clipboard::new().expect("❌ Failed to access clipboard");
+        clipboard.set_text(hash.clone()).expect("❌ Failed to copy to clipboard");
+        println!("📋 Copied to clipboard!");
+    }
+
     if let Some(output_path) = matches.get_one::<String>("output") {
         let path = PathBuf::from(output_path);
-        let mut file = File::create(path).expect("Failed to create output file");
+        let mut file = File::create(path).expect("❌ Failed to create output file");
         file.write_all(hash.as_bytes())
-            .expect("Failed to write hash to file");
+            .expect("❌ Failed to write hash to file");
         println!("📁 Hash saved to: {}", output_path);
     }
 }
