@@ -1,11 +1,13 @@
 use std::{fs, path::PathBuf};
 use std::fs::File;
 use std::io::Write;
+use std::time::Instant;
 
 use clap::{Arg, Command};
 use sha2::{Sha256, Sha512, Digest as Sha2Digest};
 use sha1::Sha1;
 use blake3;
+use colored::*;
 use arboard::Clipboard;
 
 #[derive(Debug)]
@@ -22,8 +24,8 @@ impl Algorithm {
         match name.to_lowercase().as_str() {
             "sha256" => Some(Self::SHA256),
             "sha512" => Some(Self::SHA512),
-            "sha1" => Some(Self::SHA1),
-            "md5" => Some(Self::MD5),
+            "sha1"   => Some(Self::SHA1),
+            "md5"    => Some(Self::MD5),
             "blake3" => Some(Self::BLAKE3),
             _ => None,
         }
@@ -32,7 +34,7 @@ impl Algorithm {
 
 fn main() {
     let matches = Command::new("rusty-hasher")
-        .version("1.0")
+        .version("1.1")
         .author("Devaansh Pathak")
         .about("🔐 Hash your files or text quickly in Rust!")
         .arg(
@@ -66,7 +68,13 @@ fn main() {
             Arg::new("copy")
                 .long("copy")
                 .help("Copy the hash to clipboard")
-                .num_args(0),
+                .action(clap::ArgAction::SetTrue),
+        )
+        .arg(
+            Arg::new("benchmark")
+                .long("benchmark")
+                .help("Show time taken to compute hash")
+                .action(clap::ArgAction::SetTrue),
         )
         .get_matches();
 
@@ -74,7 +82,7 @@ fn main() {
     let algo = match Algorithm::from_str(algo_str) {
         Some(a) => a,
         None => {
-            eprintln!("❌ Unsupported algorithm: {}", algo_str);
+            eprintln!("{}", format!("❌ Unsupported algorithm: {}", algo_str).red().bold());
             std::process::exit(1);
         }
     };
@@ -85,14 +93,16 @@ fn main() {
         match fs::read(file_path) {
             Ok(data) => data,
             Err(e) => {
-                panic!("❌ Failed to read file: {}", e);
+                eprintln!("{}", format!("❌ Failed to read file: {}", e).red().bold());
+                std::process::exit(1);
             }
         }
     } else {
-        eprintln!("❌ Please provide either --text or --file input.");
+        eprintln!("{}", "❌ Please provide either --text or --file input.".red().bold());
         std::process::exit(1);
     };
 
+    let start_time = Instant::now();
     let hash = match algo {
         Algorithm::SHA256 => {
             let mut hasher = Sha256::new();
@@ -109,14 +119,10 @@ fn main() {
             hasher.update(&input_data);
             format!("{:x}", hasher.finalize())
         }
-        Algorithm::MD5 => {
-            format!("{:x}", md5::compute(&input_data))
-        }
-        Algorithm::BLAKE3 => {
-            let hash = blake3::hash(&input_data);
-            hash.to_hex().to_string()
-        }
+        Algorithm::MD5 => format!("{:x}", md5::compute(&input_data)),
+        Algorithm::BLAKE3 => blake3::hash(&input_data).to_hex().to_string(),
     };
+    let elapsed = start_time.elapsed();
 
     let hash_label = match algo {
         Algorithm::SHA256 => "SHA256",
@@ -126,19 +132,46 @@ fn main() {
         Algorithm::BLAKE3 => "BLAKE3",
     };
 
-    println!("🔐 {} hash: {}", hash_label, hash);
+    println!(
+        "🔐 {} hash: {}",
+        hash_label.green().bold(),
+        hash.yellow()
+    );
 
-    if matches.get_flag("copy") {
-        let mut clipboard = Clipboard::new().expect("❌ Failed to access clipboard");
-        clipboard.set_text(hash.clone()).expect("❌ Failed to copy to clipboard");
-        println!("📋 Copied to clipboard!");
+    if matches.get_flag("benchmark") {
+        println!(
+            "{} {}",
+            "⏱️  Time taken:".purple().bold(),
+            format!("{:.4} ms", elapsed.as_secs_f64() * 1000.0).purple()
+        );
     }
 
     if let Some(output_path) = matches.get_one::<String>("output") {
         let path = PathBuf::from(output_path);
-        let mut file = File::create(path).expect("❌ Failed to create output file");
-        file.write_all(hash.as_bytes())
-            .expect("❌ Failed to write hash to file");
-        println!("📁 Hash saved to: {}", output_path);
+        match File::create(path) {
+            Ok(mut file) => {
+                if let Err(e) = file.write_all(hash.as_bytes()) {
+                    eprintln!("{}", format!("❌ Failed to write to file: {}", e).red());
+                } else {
+                    println!("📁 Hash saved to: {}", output_path.cyan());
+                }
+            }
+            Err(e) => {
+                eprintln!("{}", format!("❌ Failed to create output file: {}", e).red());
+            }
+        }
+    }
+
+    if matches.get_flag("copy") {
+        match Clipboard::new() {
+            Ok(mut clipboard) => {
+                if clipboard.set_text(hash.clone()).is_ok() {
+                    println!("{}", "📋 Copied to clipboard!".blue().bold());
+                } else {
+                    eprintln!("{}", "❌ Failed to copy to clipboard.".red());
+                }
+            }
+            Err(_) => eprintln!("{}", "❌ Clipboard access error.".red()),
+        }
     }
 }

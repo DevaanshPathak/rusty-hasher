@@ -1,15 +1,26 @@
+
 # 🔐 Rusty Hasher
 
-A simple and fast CLI tool written in Rust to generate **SHA256** and **MD5** hashes from text or files.
+A sleek, fast CLI tool written in **Rust** to generate secure cryptographic hashes from **text** or **files** with style ✨.
 
 ![Rust](https://img.shields.io/badge/Made%20with-Rust-orange)
+![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-blue)
+---
 
 ## ✨ Features
 
-- 📝 Hash **plain text** or entire **files**
-- 🔐 Output **SHA256** and **MD5** hashes
-- 💾 Save output to `.txt` or `.json` (coming soon!)
-- ⚡ Fast and lightweight
+- 🔤 Hash **text input** or entire **files**
+- 🔐 Supports multiple algorithms:
+  - `sha256`
+  - `md5`
+  - `sha1`
+  - `sha512`
+  - `blake3`
+- 💾 Save output to `.txt` or `.json`
+- 📋 Copy hash to clipboard with `--copy`
+- ⏱️ Measure performance with `--benchmark`
+- 🎨 Colorful terminal output
+- 🪶 Blazingly lightweight and cross-platform
 
 ---
 
@@ -23,24 +34,43 @@ cd rusty-hasher
 cargo build --release
 ````
 
-### 2. Run
+### 2. Run It
 
-Hash text:
+#### Hash plain text
 
 ```bash
 cargo run -- --text "hello world"
 ```
 
-Hash file:
+#### Hash a file
 
 ```bash
-cargo run -- --file path/to/your/file.txt
+cargo run -- --file ./example.txt
 ```
 
-Save to a file:
+#### Specify algorithm
 
 ```bash
-cargo run -- --text "hello world" --output result.txt
+cargo run -- --text "secure" --algo sha512
+cargo run -- --file ./data.bin --algo blake3
+```
+
+#### Save output to a file
+
+```bash
+cargo run -- --text "hash me" --output result.txt
+```
+
+#### Copy to clipboard
+
+```bash
+cargo run -- --text "copied hash" --copy
+```
+
+#### Benchmark hashing speed
+
+```bash
+cargo run -- --file ./large.iso --benchmark
 ```
 
 ---
@@ -48,7 +78,19 @@ cargo run -- --text "hello world" --output result.txt
 ## 📦 Example Output
 
 ```bash
-🔐 SHA256: b94d27b9934d3e08a52e52d7da7dabfac484efe37a5380ee9088f7ace2efcde9
-🧮   MD5: 5eb63bbbe01eeed093cb22bb8f5acdc3
-📁 Hashes saved to: result.txt
+🔐 SHA512 hash: d2a3f8cbb36495d17c02... [truncated]
+📁 Hash saved to: result.txt
+📋 Copied to clipboard!
+⏱️  Hashed in 3.21 ms
 ```
+---
+
+## 🛠️ Dependencies
+
+* [clap](https://docs.rs/clap/) for argument parsing
+* [sha2, md5, sha1, blake3](https://crates.io/) for hashing
+* [colored](https://crates.io/crates/colored) for terminal styling
+* [arboard](https://crates.io/crates/arboard) for clipboard support
+
+---
+> Built with ❤️ by [Devaansh Pathak](https://github.com/devaanshpathak)
